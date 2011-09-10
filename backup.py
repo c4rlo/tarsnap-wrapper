@@ -1,19 +1,17 @@
 #!/usr/bin/python3
 
-TOP_DIR = '/home/carlo/tarsnap/links'
-EXCLUSIONS = {
-    'firefox-profile': (
-        'Cache',
-        'urlclassifier3.sqlite',
-        'urlclassifier2.sqlite',
-    )
-}
-
 # TODO:
 # - Delete old archives?
 
-import argparse, sys, subprocess, os, os.path, datetime, re
+
+import argparse, sys, subprocess, os, os.path, datetime, re, configparser
 from collections import defaultdict
+
+
+# Global variables (from config)
+
+top_dir = None
+exclusions = None
 
 
 # Helpers
@@ -31,7 +29,7 @@ def store_single(archive):
     arch_name = archive + '_' + today_str
     log("Archiving {}...".format(archive))
     create_cmd = [ 'tarsnap', '-L' ]
-    for exclusion in EXCLUSIONS.get(archive, ()):
+    for exclusion in exclusions.get(archive, ()):
         create_cmd.extend([ '--exclude', os.path.join(archive, exclusion) ])
     create_cmd.extend([ '-cf', arch_name, archive ])
     if args.force:
@@ -51,11 +49,11 @@ def store_single(archive):
 # Commands
 
 def store():
-    os.chdir(TOP_DIR)
+    os.chdir(top_dir)
 
     if len(args.archives) == 0:
-        entries = os.listdir(TOP_DIR)
-        abs_paths = [ os.path.join(TOP_DIR, entry) for entry in entries ]
+        entries = os.listdir(top_dir)
+        abs_paths = [ os.path.join(top_dir, entry) for entry in entries ]
 
         du_process = subprocess.Popen(['du', '-Lbs'] + abs_paths, stdout=subprocess.PIPE)
         du_so, du_se = du_process.communicate()
@@ -68,7 +66,7 @@ def store():
     else:
         for item in args.archives:
             if not os.path.exists(item):
-                sys.exit("{} does not exist in {}".format(item, TOP_DIR))
+                sys.exit("{} does not exist in {}".format(item, top_dir))
             store_single(item)
 
     log("Done")
@@ -135,4 +133,65 @@ listParser.add_argument('substring', nargs='?',
                         help='the substring to match (optional)')
 
 args = argParser.parse_args()
+
+
+# Config parsing
+
+sample_cfg = \
+'''# tarsnap backup.py configuration file
+
+[General]
+# The directory which contains archives as directories or symbolic links (mandatory)
+# directory = /home/carlo/tarsnap/links
+
+# An example exclusion section: within archive "firefox-profile",
+#   exclude the listed items
+
+# [exclusions firefox-profile]
+# Cache
+# urlclassifier2
+# urlclassifier3
+'''
+
+def parse_config():
+    filename = os.path.join(os.environ['HOME'], '.backup.py.rc')
+    if not os.path.isfile(filename):
+        sys.stderr.write(
+            'Configuration file .backup.py.rc not found in home directory.\n')
+        try:
+            with open(filename, 'w') as f: f.write(sample_cfg)
+            sys.exit('Created a sample .backup.py.rc, please customize.')
+        except IOError:
+            sys.exit('Failed to create a sample file. Please investigate.')
+
+    config = configparser.ConfigParser(allow_no_value = True)
+    config.optionxform = str  # option names should be case-sensitive
+
+    try:
+        config.read(filename)
+    except configparser.ParsingError as e:
+        sys.exit(e)
+
+    global top_dir, exclusions
+
+    try:
+        top_dir = config['General']['directory']
+    except KeyError:
+        sys.exit(filename + " is missing 'directory' entry")
+
+    exclusions = { }
+    excl_re = re.compile(r'exclusions (.+)')
+    for name, section in config.items():
+        if name in ('DEFAULT', 'General'): continue
+        excl_match = excl_re.match(name)
+        if excl_match is not None:
+            arch = excl_match.group(1)
+            exclusions[arch] = list(section.keys())
+        else:
+            sys.exit("unexpected section name: " + name)
+
+
+# Go!
+
+parse_config()
 args.func()
