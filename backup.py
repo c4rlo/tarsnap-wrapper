@@ -145,7 +145,7 @@ sample_cfg = \
 # directory = /home/carlo/tarsnap/links
 
 # An example exclusion section: within archive "firefox-profile",
-#   exclude the listed items
+#   exclude the listed items.  The tarsnap --exclude feature is used.
 
 # [exclusions firefox-profile]
 # Cache

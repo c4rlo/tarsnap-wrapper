@@ -14,3 +14,5 @@ Use `backup.py store -f` to overwrite existing archives (necessary if you want t
 Use `backup.py list` as a convenient way of saying `tarsnap --list-archives | sort | grep`.
 
 Finally, there's `backup.py rename` which renames an archive (this operates on the remote archives with its full name, including the date suffix).
+
+To get started, just run `backup.py store`. You will be told off for not having a `.backup.py.rc`, and one will be created for you. Customize it by setting your directory (the ony containing an entry for each archive) and optional exclusions (corresponding to `tarsnap --exclude`), and you're ready to go.
