@@ -85,7 +85,7 @@ def view():
         value = archives[k]
         if len(value) > 0:
             dates_str = ''.join([ '\t' + d + '\n' for d in sorted(value) ])
-            print("{}:\n{}".format(k, dates_str))
+            print('{}:\n{}'.format(k, dates_str))
         else:
             print(k)
 
@@ -104,8 +104,7 @@ def list_archives():
 # Argument parsing
 
 argParser = argparse.ArgumentParser(description='tarsnap backup wrapper')
-subparsers = argParser.add_subparsers(title='subcommands', dest='subcmd',
-                                      help='default is store')
+subparsers = argParser.add_subparsers(title='subcommands', dest='subcmd')
 
 storeParser = subparsers.add_parser('store', help='make a new backup',
                                     description='make a new backup')
@@ -157,12 +156,12 @@ def parse_config():
     filename = os.path.join(os.environ['HOME'], '.backup.py.rc')
     if not os.path.isfile(filename):
         sys.stderr.write(
-            'Configuration file .backup.py.rc not found in home directory.\n')
+            "Configuration file " + filename + " not found.\n")
         try:
             with open(filename, 'w') as f: f.write(sample_cfg)
-            sys.exit('Created a sample .backup.py.rc, please customize.')
-        except IOError:
-            sys.exit('Failed to create a sample file. Please investigate.')
+            sys.exit("Created a sample .backup.py.rc, please customize.")
+        except IOError as e:
+            sys.exit("Failed to create a sample file: {}".format(e))
 
     config = configparser.ConfigParser(allow_no_value = True)
     config.optionxform = str  # option names should be case-sensitive
@@ -170,14 +169,14 @@ def parse_config():
     try:
         config.read(filename)
     except configparser.ParsingError as e:
-        sys.exit(e)
+        sys.exit("Error parsing {}: {}".format(filename, e))
 
     global top_dir, exclusions
 
     try:
         top_dir = config['General']['directory']
     except KeyError:
-        sys.exit(filename + " is missing 'directory' entry")
+        sys.exit(filename + " is missing a 'directory' entry")
 
     exclusions = { }
     excl_re = re.compile(r'exclusions (.+)')
