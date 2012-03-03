@@ -6,6 +6,7 @@
 
 import argparse, sys, subprocess, os, os.path, datetime, re, configparser
 from collections import defaultdict
+from itertools import count
 
 
 # Global variables (from config)
@@ -28,22 +29,20 @@ def store_single(archive):
     today_str = datetime.date.today().isoformat()
     arch_name = archive + '_' + today_str
     log("Archiving {}...".format(archive))
-    create_cmd = [ 'tarsnap', '-L' ]
+    tarsnap_cmd = [ 'tarsnap', '-L' ]
     for exclusion in exclusions.get(archive, ()):
-        create_cmd.extend([ '--exclude', os.path.join(archive, exclusion) ])
-    create_cmd.extend([ '-cf', arch_name, archive ])
-    if args.force:
+        tarsnap_cmd.extend([ '--exclude', os.path.join(archive, exclusion) ])
+    arch_name_try = arch_name
+    for numtry in count(1):
+        create_cmd = tarsnap_cmd + [ '-cf', arch_name_try, archive ]
         tarsnap = subprocess.Popen(create_cmd, stderr=subprocess.PIPE)
         tarsnap_so, tarsnap_se = tarsnap.communicate()
-        if tarsnap.returncode != 0:
-            tarsnap_se = tarsnap_se.decode()
-            if 'archive already exists' in tarsnap_se:
-                subprocess.check_call(('tarsnap', '-df', arch_name))
-                subprocess.call(create_cmd)
-            else:
-                sys.exit(tarsnap_se)
-    else:
-        subprocess.call(create_cmd)
+        if tarsnap.returncode == 0: return
+        tarsnap_se = tarsnap_se.decode()
+        if 'archive already exists' in tarsnap_se:
+            arch_name_try = "{}.{}".format(arch_name, numtry)
+        else:
+            sys.exit(tarsnap_se)
 
 
 # Commands
@@ -73,21 +72,21 @@ def store():
 
 def view():
     archives = defaultdict(set)
-    re_ls_line = re.compile(r'(.*)_(\d\d\d\d-\d\d-\d\d)$')
+    re_ls_line = re.compile(r'(.*)_(\d\d\d\d-\d\d-\d\d(?:\.\d+)?)$')
     for line in do_list():
         m = re_ls_line.match(line)
         if m:
-            name, date = m.groups()
-            archives[name].add(date)
+            name, suffix = m.groups()
+            archives[name].add(suffix)
         else:
-            archives[line] = set()
+            archives[line].add('(no suffix)')
     for k in sorted(archives.keys()):
-        value = archives[k]
-        if len(value) > 0:
-            dates_str = ''.join([ '\t' + d + '\n' for d in sorted(value) ])
-            print('{}:\n{}'.format(k, dates_str))
-        else:
+        suffixes = archives[k]
+        if suffixes == { '(no suffix)' }:
             print(k)
+        else:
+            suf = '\n'.join([ '\t' + s for s in sorted(suffixes) ])
+            print('{}:\n{}\n'.format(k, suf))
 
 def rename():
     try:
@@ -100,38 +99,6 @@ def list_archives():
         if args.substring is None or args.substring in ar:
             print(ar)
 
-
-# Argument parsing
-
-argParser = argparse.ArgumentParser(description='tarsnap backup wrapper')
-subparsers = argParser.add_subparsers(title='subcommands', dest='subcmd')
-
-storeParser = subparsers.add_parser('store', help='make a new backup',
-                                    description='make a new backup')
-storeParser.set_defaults(func=store)
-storeParser.add_argument('archives', metavar='archive', nargs='*',
-                         help='archive name (without date suffix); \
-                         if none given, default to all')
-storeParser.add_argument('-f', '--force', action='store_true',
-                         help='overwrite existing archives')
-
-viewParser = subparsers.add_parser('view', help='view current backups',
-                                   description='view current backups')
-viewParser.set_defaults(func=view)
-
-moveParser = subparsers.add_parser('rename', help='rename tarsnap archive',
-                                   description='rename tarsnap archive')
-moveParser.set_defaults(func=rename)
-moveParser.add_argument('old', help='old archive name')
-moveParser.add_argument('new', help='new archive name')
-
-listParser = subparsers.add_parser('list', help='list archives',
-                                   description='list archives matching optional pattern')
-listParser.set_defaults(func=list_archives)
-listParser.add_argument('substring', nargs='?',
-                        help='the substring to match (optional)')
-
-args = argParser.parse_args()
 
 
 # Config parsing
@@ -190,7 +157,46 @@ def parse_config():
             sys.exit("unexpected section name: " + name)
 
 
-# Go!
-
 parse_config()
+
+argParser = argparse.ArgumentParser(description='tarsnap backup wrapper')
+subparsers = argParser.add_subparsers(title='subcommands', dest='subcommand')
+
+storeParser = subparsers.add_parser('store', help='make a new backup',
+                                    description='''\
+Make a new backup. The archive names must exist as directories or symlinks under
+{0}. The current date in ISO format will be appended (e.g. foo_2012-03-20); if
+that name already exists on the server, an integer is appended (e.g.
+foo_2012-03-20.1). If no archives are given, all under {0} are processed, in
+reverse order of size on local storage.\
+                                    '''.format(top_dir))
+storeParser.set_defaults(func=store)
+storeParser.add_argument('archives', metavar='archive', nargs='*',
+                         help='archive name')
+
+viewParser = subparsers.add_parser('view', help='view current backups',
+                                   description='''\
+View remote archives, grouped by name. For each name, the set of date suffixes
+is shown. See also the 'list' subcommand.''')
+viewParser.set_defaults(func=view)
+
+moveParser = subparsers.add_parser('rename', help='rename tarsnap archive',
+                                   description='''
+Rename remote archive. Both 'old' and 'new' must refer to the full name,
+such as 'foo_2012-03-20.1'.''')
+moveParser.set_defaults(func=rename)
+moveParser.add_argument('old', help='old archive name')
+moveParser.add_argument('new', help='new archive name')
+
+listParser = subparsers.add_parser('list', help='list archives',
+                                   description='''
+List remote archives. Unlike the 'view' subcommand, this does not group the
+archives by name; date suffixes are included. Archives are sorted by full name.
+A substring may be provided for which to grep.''')
+listParser.set_defaults(func=list_archives)
+listParser.add_argument('substring', nargs='?',
+                        help='the substring to match (optional)')
+
+args = argParser.parse_args()
+
 args.func()

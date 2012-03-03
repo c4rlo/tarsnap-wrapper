@@ -5,7 +5,7 @@ This script offers a convenient interface to the [tarsnap](http://www.tarsnap.co
 
 ### Workflow
 
-1. You create a directory somewhere that contains one directory entry for each archive. Each directory entry may be either a symbolic link or a directory. If it is a directory, it may contain files, symbolic links and subdirectories. You can exclude files within a directory from an archive via the `.backup.py.rc` config file.
+1. Create a directory somewhere that contains one directory entry for each archive. Each directory entry may be either a symbolic link or a directory. If it is a directory, it may contain files, symbolic links and subdirectories. You can exclude files within a directory from an archive via the `.backup.py.rc` config file.
 2. From time to time (perhaps via a cronjob), you run `backup.py store`, which will create new tarsnap archives by appending the current date (yyyy-mm-dd) to each archive name.
 
 ### Getting started
@@ -16,9 +16,9 @@ To get started, just run `backup.py store`. You will be told off for not having 
 
 Use `backup.py view` to see at which dates each archive was archived.
 
-Use `backup.py store -f` to overwrite existing archives (necessary if you want to archive the same archive twice in a day).
+If an archive is stored twice in a day, you end up with e.g. *foo_2012-03-20* and *foo_2012-03-20.1*.
 
 Use `backup.py list` as a convenient way of saying `tarsnap --list-archives | sort | grep`.
 
-Finally, there's `backup.py rename` which renames an archive (this operates on the remote archives with its full name, including the date suffix).
+Finally, there's `backup.py rename` which renames an archive (this operates on the remote archives with their full names, including the date suffix).
 
