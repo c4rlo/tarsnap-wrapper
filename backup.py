@@ -168,7 +168,7 @@ Make a new backup. The archive names must exist as directories or symlinks under
 {0}. The current date in ISO format will be appended (e.g. foo_2012-03-20); if
 that name already exists on the server, an integer is appended (e.g.
 foo_2012-03-20.1). If no archives are given, all under {0} are processed, in
-reverse order of size on local storage.\
+ascending order of size on local storage.\
                                     '''.format(top_dir))
 storeParser.set_defaults(func=store)
 storeParser.add_argument('archives', metavar='archive', nargs='*',
@@ -181,7 +181,7 @@ is shown. See also the 'list' subcommand.''')
 viewParser.set_defaults(func=view)
 
 moveParser = subparsers.add_parser('rename', help='rename tarsnap archive',
-                                   description='''
+                                   description='''\
 Rename remote archive. Both 'old' and 'new' must refer to the full name,
 such as 'foo_2012-03-20.1'.''')
 moveParser.set_defaults(func=rename)
@@ -189,7 +189,7 @@ moveParser.add_argument('old', help='old archive name')
 moveParser.add_argument('new', help='new archive name')
 
 listParser = subparsers.add_parser('list', help='list archives',
-                                   description='''
+                                   description='''\
 List remote archives. Unlike the 'view' subcommand, this does not group the
 archives by name; date suffixes are included. Archives are sorted by full name.
 A substring may be provided for which to grep.''')
