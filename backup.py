@@ -37,9 +37,11 @@ def store_single(archive):
         create_cmd = tarsnap_cmd + [ '-cf', arch_name_try, archive ]
         tarsnap = subprocess.Popen(create_cmd, stderr=subprocess.PIPE)
         tarsnap_so, tarsnap_se = tarsnap.communicate()
-        if tarsnap.returncode == 0: return
         tarsnap_se = tarsnap_se.decode()
-        if 'archive already exists' in tarsnap_se:
+        if tarsnap.returncode == 0:
+            sys.stderr.write(tarsnap_se)
+            return
+        elif 'archive already exists' in tarsnap_se:
             arch_name_try = "{}.{}".format(arch_name, numtry)
         else:
             sys.exit(tarsnap_se)
