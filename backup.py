@@ -65,16 +65,31 @@ def rename():
     except subprocess.CalledProcessError: pass
 
 def list_archives():
-    for ar in sorted(do_list()):
-        if args.substring is None or args.substring in ar:
-            print(ar)
+    if args.substring is None:
+        ls = do_list()
+    else:
+        ls = (a for a in do_list() if args.substring in a)
+    for ar in sorted(ls):
+        print(ar)
 
 
 # Helpers
 
 def do_list():
-    return subprocess.check_output(('tarsnap', '--list-archives')).decode(). \
-            rstrip('\n').split('\n')
+    try:
+        proc = subprocess.Popen(('tarsnap', '--list-archives'),
+                              stdout=subprocess.PIPE)
+        done = False
+        for line in proc.stdout:
+            yield line.decode().rstrip('\n')
+        done = True
+    finally:
+        if not done:
+            for line in proc.stdout: pass
+        proc.stdout.close()
+        status = proc.wait()
+        if done and status != 0:
+            sys.exit(status)
 
 def store_single(archive):
     today_str = datetime.date.today().isoformat()
