@@ -76,20 +76,15 @@ def list_archives():
 # Helpers
 
 def do_list():
+    proc = subprocess.Popen(('tarsnap', '--list-archives'),
+                          stdout=subprocess.PIPE)
     try:
-        proc = subprocess.Popen(('tarsnap', '--list-archives'),
-                              stdout=subprocess.PIPE)
-        done = False
         for line in proc.stdout:
             yield line.decode().rstrip('\n')
-        done = True
     finally:
-        if not done:
-            for line in proc.stdout: pass
         proc.stdout.close()
         status = proc.wait()
-        if done and status != 0:
-            sys.exit(status)
+    if status != 0: sys.exit(status)
 
 def store_single(archive):
     today_str = datetime.date.today().isoformat()
