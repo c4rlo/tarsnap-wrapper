@@ -31,7 +31,7 @@ def store():
         assert len(entry_sizes) == len(entries)
         item_to_size = { os.path.basename(es[1]): int(es[0]) for es in entry_sizes }
 
-        for item in sorted(entries, key = lambda e: item_to_size[e]):
+        for item in sorted(entries, key=lambda e: item_to_size[e]):
             store_single(item)
     else:
         for item in args.archives:
@@ -114,8 +114,8 @@ def log(msg):
 
 # Config parsing
 
-sample_cfg = \
-'''# tarsnap backup.py configuration file
+sample_cfg = '''\
+# tarsnap backup.py configuration file
 
 [General]
 # The directory which contains archives as directories or symbolic links
@@ -142,7 +142,7 @@ def parse_config():
         except IOError as e:
             sys.exit("Failed to create a sample file: {}".format(e))
 
-    config = configparser.ConfigParser(allow_no_value = True)
+    config = configparser.ConfigParser(allow_no_value=True)
     config.optionxform = str  # option names should be case-sensitive
 
     try:
@@ -180,7 +180,7 @@ def parse_args():
     Make a new backup. The archive names must exist as directories or symlinks
     under {0}. The current date in ISO format will be appended (e.g.
     foo_2012-03-20); if that name already exists on the server, an integer is
-    appended (e.g.  foo_2012-03-20.1). If no archives are given, all under {0}
+    appended (e.g. foo_2012-03-20.1). If no archives are given, all under {0}
     are processed, in ascending order of size on local storage.\
                                         '''.format(top_dir))
     storeParser.set_defaults(func=store)
@@ -205,7 +205,7 @@ def parse_args():
                                        description='''\
     List remote archives. Unlike the 'view' subcommand, this does not group the
     archives by name; date suffixes are included. Archives are sorted by full
-    name.  A substring may be provided for which to grep.''')
+    name. A substring may be provided for which to grep.''')
     listParser.set_defaults(func=list_archives)
     listParser.add_argument('substring', nargs='?',
                             help='the substring to match (optional)')
