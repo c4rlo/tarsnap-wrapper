@@ -173,7 +173,7 @@ def parse_config():
 
 def parse_args():
     argParser = argparse.ArgumentParser(description='tarsnap backup wrapper')
-    subparsers = argParser.add_subparsers(title='subcommands', dest='subcommand')
+    subparsers = argParser.add_subparsers(title='subcommands')
 
     storeParser = subparsers.add_parser('store', help='make a new backup',
                                         description='''\
@@ -210,7 +210,11 @@ def parse_args():
     listParser.add_argument('substring', nargs='?',
                             help='the substring to match (optional)')
 
-    return argParser.parse_args()
+    args = argParser.parse_args()
+    if 'func' not in args:
+        argParser.print_help()
+        sys.exit(2)
+    return args
 
 
 # Main
